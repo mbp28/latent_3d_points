@@ -1,4 +1,4 @@
-import torch
+#import torch
 import argparse
 import time
 import cv2
@@ -8,9 +8,9 @@ import scipy
 from pdb import set_trace
 #from emd import EMDLoss as cuda_emd
 from scipy.stats import wasserstein_distance as scipy_emd #scipy
-from pyemd import emd as py_emd #github python version
+#from pyemd import emd as py_emd #github python version
 from cv2 import EMD as cv_emd #openCV
-from src.external.structural_losses.tf_approxmatch import approx_match, match_cost
+from external.structural_losses.tf_approxmatch import approx_match, match_cost
 
 def main(n1, n2, dim, seed):
     # Generate data with numpy
@@ -28,12 +28,12 @@ def main(n1, n2, dim, seed):
     # each point becomes a histogram bin, each point set becomes a binary vector to
     # indicate which bins (i.e. points) it contains # use pairwise distances
     # between histogram bins to get the correct emd
-    pts = np.concatenate([pts1, pts2])
-    dst = scipy.spatial.distance_matrix(pts, pts)
-    hist1 = (1 / n1) * np.concatenate([np.ones(n1), np.zeros(n2)])
-    hist2 = (1 / n2) * np.concatenate([np.zeros(n1), np.ones(n2)])
-    py_loss = py_emd(hist1, hist2, dst)
-    print("PyEMD {:.4f}".format(py_loss))
+    # pts = np.concatenate([pts1, pts2])
+    # dst = scipy.spatial.distance_matrix(pts, pts)
+    # hist1 = (1 / n1) * np.concatenate([np.ones(n1), np.zeros(n2)])
+    # hist2 = (1 / n2) * np.concatenate([np.zeros(n1), np.ones(n2)])
+    # py_loss = py_emd(hist1, hist2, dst)
+    # print("PyEMD {:.4f}".format(py_loss))
 
     # OpenCV
     # each signature is a matrix, first column gives weight (should be uniform for
@@ -60,13 +60,15 @@ def main(n1, n2, dim, seed):
 
     # Tensorflow
     # tf Graph
-    pts1_tf = tf.convert_to_tensor(pts1)
-    pts2_tf = tf.convert_to_tensor(pts2)
+    pts1_tf = tf.convert_to_tensor(pts1.reshape(1,n1,dim), dtype=tf.float32)
+    pts2_tf = tf.convert_to_tensor(pts2.reshape(1,n2,dim), dtype=tf.float32)
     match = approx_match(pts1_tf, pts2_tf)
-    tf_loss = tf.reduce_mean(match_cost(pts1_tf, pts2_tf, match))
+    tf_loss = match_cost(pts1_tf, pts2_tf, match)
     # tf Session
     sess = tf.Session()
-    print(sess.run(match, tf_loss))
+    print("Tensorflow EMD {:.4f}".format(sess.run(tf_loss[0])))
+    # print(sess.run(tf_loss))
+    sess.close()
 
 
     # set_trace()
